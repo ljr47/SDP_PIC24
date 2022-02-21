@@ -8,14 +8,15 @@
 #include "mcc_generated_files/system.h"
 #include <stdio.h>
 #include <string.h>
+#include "bluetooth.h"
 
-#define RTS _RF13 // Output, For potential hardware handshaking.
-#define CTS _RF12 // Input, For potential hardware handshaking.
-
-#define ASTERISK 0x2A
-#define CARRIAGE 0x0D
-#define NEWLINE 0x0A
-#define NULL 0x00
+//#define RTS _RF13 // Output, For potential hardware handshaking.
+//#define CTS _RF12 // Input, For potential hardware handshaking.
+//
+//#define ASTERISK 0x2A
+//#define CARRIAGE 0x0D
+//#define NEWLINE 0x0A
+//#define NULL 0x00
 #define CHAR_A 0x41
 #define CHAR_Z 0x5a
 #define CHAR_a 0x61
@@ -45,39 +46,39 @@ void InitPMP( void)
     PMAEN = 0x0001; // PMA0 enabled
 }
 
-void InitU2(void)
-{
-    U2BRG = 34; // PIC24FJ128GA010 data sheet, 17.1 for calculation, Fcy= 16MHz.
-    U2MODE =0x8008; // See data sheet, pg148. Enable UART2, BRGH = 1,
-    // Idle state = 1, 8 data, No parity, 1 Stop bit
-    U2STA = 0x0400; // See data sheet, pg. 150, Transmit Enable
-    // Following lines pertain Hardware handshaking
-    TRISFbits.TRISF13 = 1; // enable RTS , output
-    RTS = 1; // default status , not ready to send
-}
-
-char putU2(char c)
-{
-    while (CTS); //wait for !CTS (active low)
-    while (U2STAbits.UTXBF ); // Wait if transmit buffer full.
-    U2TXREG = c; // Write value to transmit FIFO
-    return c;
-}
-
-char getU2( void )
-{
-    RTS = 0; // telling the other side !RTS
-    TMR1 = 0;
-    while (!U2STAbits. URXDA && TMR1 < 100 * 2);
-    if (!U2STAbits. URXDA)
-    {
-        RTS = 1;
-        return NEWLINE;
-    }
-//    while (! U2STAbits . URXDA ); // wait
-    RTS =1; // telling the other side RTS
-    return U2RXREG ; // from receiving buffer
-} //getU2
+//void InitU2(void)
+//{
+//    U2BRG = 34; // PIC24FJ128GA010 data sheet, 17.1 for calculation, Fcy= 16MHz.
+//    U2MODE =0x8008; // See data sheet, pg148. Enable UART2, BRGH = 1,
+//    // Idle state = 1, 8 data, No parity, 1 Stop bit
+//    U2STA = 0x0400; // See data sheet, pg. 150, Transmit Enable
+//    // Following lines pertain Hardware handshaking
+//    TRISFbits.TRISF13 = 1; // enable RTS , output
+//    RTS = 1; // default status , not ready to send
+//}
+//
+//char putU2(char c)
+//{
+//    while (CTS); //wait for !CTS (active low)
+//    while (U2STAbits.UTXBF ); // Wait if transmit buffer full.
+//    U2TXREG = c; // Write value to transmit FIFO
+//    return c;
+//}
+//
+//char getU2( void )
+//{
+//    RTS = 0; // telling the other side !RTS
+//    TMR1 = 0;
+//    while (!U2STAbits. URXDA && TMR1 < 100 * 2);
+//    if (!U2STAbits. URXDA)
+//    {
+//        RTS = 1;
+//        return NEWLINE;
+//    }
+////    while (! U2STAbits . URXDA ); // wait
+//    RTS =1; // telling the other side RTS
+//    return U2RXREG ; // from receiving buffer
+//} //getU2
 
 void InitLCD( void)
 {
@@ -203,238 +204,96 @@ int main(void)
     InitPMP();
     InitLCD();
     InitU2();
-    
-//    initButtons(0x000F);
-//    msDelay(100);
-
 
     SetCursorAtLine(1);
     
     putsLCD("Start LCD");
    
-    
-    
-    int isCommand;
-    char str[25];
-    int size = 0;
+//    int isCommand;
+//    char str[25];
+//    int size = 0;
 
+    int command;
     while (1)
     {
-        char tmp;
-        tmp = getU2();
-        PORTA = 0x01 << 7;
+        command = getCommand();
         msDelay(50);
-        
-        if (isLetter(tmp))
+        SetCursorAtLine(2);
+//        putsLCD("                ");
+//        msDelay(50);
+        if (command == 1)
         {
-            char t[4];
-            sprintf(t, "%c", tmp);
-            putsLCD(t);
+            putsLCD("Start           ");
+            msDelay(50);
         }
-        
-        //checks if command starts w/ an asterisk
-        if (tmp == ASTERISK)
+        else if (command == 2)
         {
-            PORTA = 0x01 << 2;
-            isCommand = !isCommand;     //sets command flag
-            PORTA |= 0x01 << 3;
-
-//            SetCursorAtLine(2);
-//            char t2;
-//            sprintf(t2, "%d", isCommand);
-//            putsLCD(t2);
-//            msDelay(500);
-                       
-            // checks if it is a command
-            if (isCommand)
-            {
-                //beginning of a command
-                PORTA = 0x01 << 6;
-//                msDelay(250);
-                continue;
-            }
-            else
-            {
-                //end of a command
-                SetCursorAtLine(2);
-                // Only 16 characters fit on the LCD
-                str[16] = NULL;
-//                putsLCD(str);
-//                msDelay(500);
-                int i;
-                for (i = 0; i < 25; i++)
-                {
-                    str[i] = NULL;
-                }
-                size = 0;
-                isCommand = 0;
-                tmp = NULL;
-                putU2(0x0D);
-                msDelay(50);
-                putU2(0x0A);
-                msDelay(50);
-                U2STAbits.OERR = 0;
-                PORTA = 0x01 << 7;
-            }
+            putsLCD("End             ");
+            msDelay(50);
         }
-        else if (isCommand && tmp != NEWLINE)   //middle of a command
+        else
         {
-            char temp_str[2];
-            sprintf(temp_str, "%c", tmp);
-            putsLCD(temp_str);
-
-//            str[size] = tmp;
-            putU2(tmp);
-            size++;
-            PORTA = 0x01;
-//            msDelay(200);
+            putsLCD("Not command     ");
+            msDelay(50);
         }
-        
-////        char str[50];
-//        char str[25];
-//        str[0] = NULL;
-//        
 //        char tmp;
 //        tmp = getU2();
-//        msDelay(100);
-//        
-//        int isCommand = (tmp == ASTERISK);
-//        
-//        int size = 0;
-//        while(tmp != NULL)
-//        {
-//            PORTA = 0x02;
-//            tmp = getU2();
-//            msDelay(200);
-//
-//            if (!isCommand)
-//            {
-//                PORTA = 0x01 << 7 | tmp % 8;
-//                continue;
-//            }
-//            size++;
-//            PORTA = 0x04;
-//            char temp_str[2];
-//            sprintf(temp_str, "%c", tmp);
-//            strcat(str, temp_str);
-//            PORTA = 0x01;
-//            
-//            putU2(temp_str[0]);
-//            msDelay(500);
-//            PORTA = 0x00;
-//        }
-//        
-//        str[size] = NULL;
-//        putsLCD(str);
-////        input = getU2();
-//        msDelay(500);
-//        
-//        putU2(0x0D);
-//        putU2(0x0A);
-//        
-//        
-////        input = 0;
+//        PORTA = 0x01 << 7;
 //        msDelay(50);
-        
-//        int i;
-//        for (i = 0; i < 25; i++)
+//        
+//        if (isLetter(tmp))
 //        {
-//            PORTA = 0x02;
-//            char temp;
-//            temp = getU2();
-//            if (!isCommand)
-//            {
-//                continue;
-//            }
-//            PORTA = 0x04;
-//            char temp_str[2];
-//            sprintf(temp_str, "%c", temp);
-//            strcat(str, temp_str);
-//            PORTA = 0x01;
-//            
-//            if (temp == NULL)
-//            {
-//                PORTA = 0x01 << 7;
-//                msDelay(500);
-//                break;
-//            }
-//            putU2(temp_str[0]);
-//            msDelay(500);
-//            PORTA = 0x00;
+//            char t[4];
+//            sprintf(t, "%c", tmp);
+//            putsLCD(t);
 //        }
-        
-
-        
-//        int int_input = input;
-        
-//        sprintf(str, "Received %d\0", int_input);
-//        PORTA = 0x01 << 6;
-//        msDelay(100);
-//
-//        putsLCD(input);
-//        msDelay(500);
-//        PORTA = 0x01 << 5;
-//        msDelay(100);
-
-//        for (j = 0; j < 25; j++)
+//        
+//        //checks if command starts w/ an asterisk
+//        if (tmp == ASTERISK)
 //        {
-//            if (input[j] != '\n')
+//            PORTA = 0x01 << 2;
+//            isCommand = !isCommand;     //sets command flag
+//            PORTA |= 0x01 << 3;
+//                       
+//            // checks if it is a command
+//            if (isCommand)
 //            {
-////                putsLCD(input[j]);
-//                putU2(input[j]);
-//                input[j] = 0;
+//                //beginning of a command
+//                PORTA = 0x01 << 6;
+//                continue;
 //            }
 //            else
 //            {
-//                PORTA = 0x01 << 4;
-//                msDelay(100);
-//
-//                break;
+//                //end of a command
+//                SetCursorAtLine(2);
+//                // Only 16 characters fit on the LCD
+//                str[16] = NULL;
+//                int i;
+//                for (i = 0; i < 25; i++)
+//                {
+//                    str[i] = NULL;
+//                }
+//                size = 0;
+//                isCommand = 0;
+//                tmp = NULL;
+//                putU2(0x0D);
+//                msDelay(50);
+//                putU2(0x0A);
+//                msDelay(50);
+//                U2STAbits.OERR = 0;
+//                PORTA = 0x01 << 7;
 //            }
 //        }
-//        putU2(0x0D);
-//        putU2(0x0A);
-//        
-//        
-//        input = 0;
-//        msDelay(50);
-        
-        
-//        sprintf(str, "This is a test send from click - %d", Count);
-//        InitLCD();
-//        msDelay(250);
-//        
-//        for (j = 0; j < 36; j++)
+//        else if (isCommand && tmp != NEWLINE)   //middle of a command
 //        {
-//            putU2(str[j]);
+//            char temp_str[2];
+//            sprintf(temp_str, "%c", tmp);
+//            putsLCD(temp_str);
+//
+//            putU2(tmp);
+//            size++;
+//            PORTA = 0x01;
 //        }
-//        sprintf(temp, "%d", Count);
-//        putU2(0x0D);
-//        putU2(0x0A);
-//        putsLCD(temp);
-//        
-//        msDelay(500);
-//        
-//        input = getU2();
-//        SetCursorAtLine(2);
-//        putsLCD(input);
-//        
-////        temp = 5;
-////        
-//        sprintf(str, "Test # %d", Count);
-//        
-//        for (j = 0; j < 15; j++)
-//        {
-//            putU2(str[j]);
-//            str[j] = 0;
-//        }
-//               
-//        putU2(0x0D);
-//        putU2(0x0A);
-//       
-//        Count++;
-////        
-////        msDelay(500);
     }
     return 1;
 }
