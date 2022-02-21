@@ -16,6 +16,10 @@
 #define CARRIAGE 0x0D
 #define NEWLINE 0x0A
 #define NULL 0x00
+#define CHAR_A 0x41
+#define CHAR_Z 0x5a
+#define CHAR_a 0x61
+#define CHAR_z 0x7a
 
 void msDelay(int ms) 
 {
@@ -183,6 +187,11 @@ void setPortA(unsigned int display)
     PORTA = 0x00FF&display; // transfer to PORTA (LED?s)
 }
 
+int isLetter(char c)
+{
+    return ((c >= CHAR_A && c <= CHAR_Z) || (c >= CHAR_a && c <= CHAR_z));
+}
+
 int main(void) 
 {   
     // initialize the device 
@@ -205,48 +214,127 @@ int main(void)
    
     
     
+    int isCommand;
+    char str[25];
+    int size = 0;
 
     while (1)
     {
-//        char str[50];
-        char str[25];
-        str[0] = NULL;
-        
         char tmp;
         tmp = getU2();
-        msDelay(100);
+        PORTA = 0x01 << 7;
+        msDelay(50);
         
-        int isCommand = (tmp == ASTERISK | tmp >= );
-        
-        int size = 0;
-        while(tmp != NULL)
+        if (isLetter(tmp))
         {
-            PORTA = 0x02;
-            tmp = getU2();
-            msDelay(200);
-
-            if (!isCommand)
-            {
-                PORTA = 0x01 << 7 | tmp % 8;
-                continue;
-            }
-            size++;
-            PORTA = 0x04;
-            char temp_str[2];
-            sprintf(temp_str, "%c", tmp);
-            strcat(str, temp_str);
-            PORTA = 0x01;
-            
-            putU2(temp_str[0]);
-            msDelay(500);
-            PORTA = 0x00;
+            char t[4];
+            sprintf(t, "%c", tmp);
+            putsLCD(t);
         }
         
-        SetCursorAtLine(1);
-        str[size] = NULL;
-        putsLCD(str);
-//        input = getU2();
-        msDelay(500);
+        //checks if command starts w/ an asterisk
+        if (tmp == ASTERISK)
+        {
+            PORTA = 0x01 << 2;
+            isCommand = !isCommand;     //sets command flag
+            PORTA |= 0x01 << 3;
+
+//            SetCursorAtLine(2);
+//            char t2;
+//            sprintf(t2, "%d", isCommand);
+//            putsLCD(t2);
+//            msDelay(500);
+                       
+            // checks if it is a command
+            if (isCommand)
+            {
+                //beginning of a command
+                PORTA = 0x01 << 6;
+//                msDelay(250);
+                continue;
+            }
+            else
+            {
+                //end of a command
+                SetCursorAtLine(2);
+                // Only 16 characters fit on the LCD
+                str[16] = NULL;
+//                putsLCD(str);
+//                msDelay(500);
+                int i;
+                for (i = 0; i < 25; i++)
+                {
+                    str[i] = NULL;
+                }
+                size = 0;
+                isCommand = 0;
+                tmp = NULL;
+                putU2(0x0D);
+                msDelay(50);
+                putU2(0x0A);
+                msDelay(50);
+                U2STAbits.OERR = 0;
+                PORTA = 0x01 << 7;
+            }
+        }
+        else if (isCommand && tmp != NEWLINE)   //middle of a command
+        {
+            char temp_str[2];
+            sprintf(temp_str, "%c", tmp);
+            putsLCD(temp_str);
+
+//            str[size] = tmp;
+            putU2(tmp);
+            size++;
+            PORTA = 0x01;
+//            msDelay(200);
+        }
+        
+////        char str[50];
+//        char str[25];
+//        str[0] = NULL;
+//        
+//        char tmp;
+//        tmp = getU2();
+//        msDelay(100);
+//        
+//        int isCommand = (tmp == ASTERISK);
+//        
+//        int size = 0;
+//        while(tmp != NULL)
+//        {
+//            PORTA = 0x02;
+//            tmp = getU2();
+//            msDelay(200);
+//
+//            if (!isCommand)
+//            {
+//                PORTA = 0x01 << 7 | tmp % 8;
+//                continue;
+//            }
+//            size++;
+//            PORTA = 0x04;
+//            char temp_str[2];
+//            sprintf(temp_str, "%c", tmp);
+//            strcat(str, temp_str);
+//            PORTA = 0x01;
+//            
+//            putU2(temp_str[0]);
+//            msDelay(500);
+//            PORTA = 0x00;
+//        }
+//        
+//        str[size] = NULL;
+//        putsLCD(str);
+////        input = getU2();
+//        msDelay(500);
+//        
+//        putU2(0x0D);
+//        putU2(0x0A);
+//        
+//        
+////        input = 0;
+//        msDelay(50);
         
 //        int i;
 //        for (i = 0; i < 25; i++)
@@ -304,12 +392,12 @@ int main(void)
 //                break;
 //            }
 //        }
-        putU2(0x0D);
-        putU2(0x0A);
-        
-        
+//        putU2(0x0D);
+//        putU2(0x0A);
+//        
+//        
 //        input = 0;
-        msDelay(50);
+//        msDelay(50);
         
         
 //        sprintf(str, "This is a test send from click - %d", Count);
