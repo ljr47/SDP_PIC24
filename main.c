@@ -216,6 +216,8 @@ int main(void)
     int command;
     while (1)
     {
+        U2STAbits.OERR = 0;
+
         command = getCommand();
         msDelay(50);
         SetCursorAtLine(2);

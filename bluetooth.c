@@ -41,7 +41,7 @@ char getU2( void )
 {
     RTS = 0; // telling the other side !RTS
     TMR1 = 0;
-    while (!U2STAbits. URXDA && TMR1 < 100 * 2);
+    while (!U2STAbits. URXDA && TMR1 < 65535);
     if (!U2STAbits. URXDA)
     {
         RTS = 1;
